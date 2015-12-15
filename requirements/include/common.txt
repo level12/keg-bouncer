@@ -1,0 +1,9 @@
+Flask-User
+SQLAlchemy
+coveralls
+flake8
+flask-webtest
+pytest
+pytest-cov
+tox
+wrapt
