@@ -134,6 +134,37 @@ folder.
       version_locations = alembic/versions keg_bouncer:alembic/versions
 
 
+If you run ``alembic heads`` you should now see two heads, one for you
+application and one for keg_bouncer.
+
+.. code:: txt
+
+    $ alembic heads
+    51ba1b47505e (application) (head)
+    13d265b97e4d (keg_bouncer) (head)
+
+
+It is totally fine for the application to have multiple heads, but you will need
+to upgrade them independently. A better option is to merge the two heads into
+one. Do that with the ``alembic merge`` comand.
+
+
+.. code:: sh
+
+  $ alembic merge -m "pull keg bouncer into application" 51ba1b 13d265
+  Generating /path/to/app/alembic/versions/31b094b2844f_pull_keg_bouncer_into_application.py ... done
+
+
+If you run ``alembic heads`` again you will find that there is one head. The
+only thing needing to be done in this migration are actions required to augment
+the changes Keg-Bouncer will make for your applicaiton.
+
+.. code:: txt
+
+  $ alembic heads
+  31b094b2844f (application, keg_bouncer) (head)
+
+
 Development
 -----------
 
