@@ -118,23 +118,20 @@ To protect various parts of your application, you can use the tools provided in 
 Migration
 *********
 
-To migrate your database using Alembic_, you can run the provided migrations:
+Keg-Bouncer uses Alembic_ to manage migrations and it assumes you are as well.
 
 .. _Alembic: https://alembic.readthedocs.org/
 
-.. code:: python
+To use the migrations that Keg-Bouncer provides you need to tell Alembic where
+to find the revisions.  In your `alembic.ini` file for your application adjust
+your ``version_locations`` setting to include your Keg-Bouncer's versions
+folder.
 
-   # ... alembic revision ...
 
-   from alembic import op
+.. code:: ini
 
-   from keg_bouncer.model.migration.alembic import latest
-
-   def upgrade():
-       latest.upgrade(op, 'users.id', sqlalchemy.Integer)
-
-   def downgrade():
-       latest.downgrade(op, include_user_linking_tables=True)
+      [alembic]
+      version_locations = alembic/versions keg_bouncer:alembic/versions
 
 
 Development
