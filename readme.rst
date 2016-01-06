@@ -118,23 +118,68 @@ To protect various parts of your application, you can use the tools provided in 
 Migration
 *********
 
-To migrate your database using Alembic_, you can run the provided migrations:
+KegBouncer uses Alembic_ to manage migrations and it assumes your app does as well.
 
 .. _Alembic: https://alembic.readthedocs.org/
 
+To use the migrations that KegBouncer provides, you need to tell Alembic where
+to find the revisions.  In your `alembic.ini` file for your application, adjust
+your ``version_locations`` setting to include your KegBouncer's versions
+folder.
+
+
+.. code:: ini
+
+      [alembic]
+      version_locations = alembic/versions keg_bouncer:alembic/versions
+
+
+If you run ``alembic heads`` you should now see two heads, one for your application and one for
+KegBouncer.
+
+.. code:: txt
+
+    $ alembic heads
+    51ba1b47505e (application) (head)
+    13d265b97e4d (keg_bouncer) (head)
+
+
+It is totally fine for the application to have multiple heads, but you will need to upgrade them
+independently. A better option is to merge the two heads into one. Do that with the
+``alembic merge`` comand.
+
+
+.. code:: sh
+
+  $ alembic merge -m "pull KegBouncer into application" 51ba1b 13d265
+  Generating /path/to/app/alembic/versions/31b094b2844f_pull_keg_bouncer_into_application.py ... done
+
+
+If you run ``alembic heads`` again you will find that there is one head.
+
+.. code:: txt
+
+  $ alembic heads
+  31b094b2844f (application, keg_bouncer) (head)
+
+
+Also within this merge revision, you will need to create some linking tables for your User
+entity (which mixes in ``keg_bouncer.model.mixins.UserMixin``). You can modify the migration to look
+very much like this:
+
 .. code:: python
 
-   # ... alembic revision ...
+  from keg_bouncer.model import migration
 
-   from alembic import op
+  from fisresid.model.entities import User
 
-   from keg_bouncer.model.migration.alembic import latest
 
-   def upgrade():
-       latest.upgrade(op, 'users.id', sqlalchemy.Integer)
+  def upgrade():
+      migration.link_user_to_user_groups(op, User.id)
 
-   def downgrade():
-       latest.downgrade(op, include_user_linking_tables=True)
+
+  def downgrade():
+      migration.drop_link_from_user_to_user_groups(op)
 
 
 Development

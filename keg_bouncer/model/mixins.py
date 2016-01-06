@@ -7,8 +7,11 @@ import sqlalchemy.orm as saorm
 import flask_user
 
 from .entities import (
-    UserGroup, joined_permission_query, make_link,
-    user_group_permission_map, user_group_bundle_map
+    UserGroup,
+    joined_permission_query,
+    make_user_to_user_group_link,
+    user_group_bundle_map,
+    user_group_permission_map,
 )
 
 
@@ -22,7 +25,7 @@ class UserMixin(flask_user.UserMixin):
           as a string.
     """
 
-    # Instances will override this when caching is needed.
+    # Instances will shadow this when populating their own cache.
     _cached_permissions = None
 
     primary_key_column = 'id'  # Name of the primary key. Subclasses can override this default.
@@ -38,9 +41,7 @@ class UserMixin(flask_user.UserMixin):
     @declared_attr
     def user_user_group_map(cls):
         """A linking (mapping) table between users and user groups."""
-        return make_link('user_user_group_map',
-                         'user_id', getattr(cls, cls.primary_key_column),
-                         'user_group_id', UserGroup.id)
+        return make_user_to_user_group_link(getattr(cls, cls.primary_key_column))
 
     def get_all_permissions(self):
         """Get all permissions that are joined to this User, whether directly, through

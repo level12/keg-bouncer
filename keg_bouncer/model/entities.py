@@ -5,6 +5,8 @@ import sqlalchemy.orm as saorm
 from keg.db import db
 from keg_elements.db.mixins import MethodsMixin
 
+from .utils import make_link
+
 
 class Permission(db.Model, MethodsMixin):
     """An entity that describes an authentication boundary which can be used directly
@@ -30,7 +32,7 @@ class Permission(db.Model, MethodsMixin):
     user. To facilitate this touchpoint, each permission has a string description that
     provides a helpful, human-oriented description of the permission.
     """
-    __tablename__ = 'permissions'
+    __tablename__ = 'keg_bouncer_permissions'
     id = sa.Column(sa.Integer, primary_key=True)
     token = sa.Column(sa.String(255), nullable=False, unique=True)
     description = sa.Column(sa.Text, nullable=False)
@@ -43,7 +45,7 @@ class PermissionBundle(db.Model, MethodsMixin):
     common task or component. Permission bundles allow the system to represent this
     commonality explicitly.
     """
-    __tablename__ = 'permission_bundles'
+    __tablename__ = 'keg_bouncer_permission_bundles'
     id = sa.Column(sa.Integer, primary_key=True)
     label = sa.Column(sa.Text, nullable=False)
     permissions = saorm.relationship(Permission,
@@ -66,7 +68,7 @@ class UserGroup(db.Model, MethodsMixin):
 
     User groups may contain permissions directy and/or through permission bundles.
     """
-    __tablename__ = 'user_groups'
+    __tablename__ = 'keg_bouncer_user_groups'
     id = sa.Column(sa.Integer, primary_key=True)
     label = sa.Column(sa.Text, nullable=False)
     permissions = saorm.relationship(Permission,
@@ -92,43 +94,27 @@ class UserGroup(db.Model, MethodsMixin):
         ))
 
 
-def make_link(name, from_column_name, from_column, to_column_name, to_column):
-    """Returns a table which represents a many-to-many relationship between two columns.
-
-    :param name: is the name of the linking table.
-    :from_column_name: is the desired name of the linking table's left column.
-    :from_column: is the column object to which the linking table's left column should refer.
-    :to_column_name: ditto, for the right column.
-    :to_column: ditto, for the right column.
-    """
-    return db.Table(
-        name,
-        sa.Column(
-            from_column_name,
-            from_column.type,
-            sa.ForeignKey(from_column, ondelete='CASCADE'),
-            nullable=False,
-            primary_key=True),
-        sa.Column(
-            to_column_name,
-            to_column.type,
-            sa.ForeignKey(to_column, ondelete='CASCADE'),
-            nullable=False,
-            primary_key=True)
-    )
-
-
-user_group_permission_map = make_link('user_group_permission_map',
+user_group_permission_map = make_link('keg_bouncer_user_group_permission_map',
                                       'user_group_id', UserGroup.id,
                                       'permission_id', Permission.id)
 
-user_group_bundle_map = make_link('user_group_bundle_map',
+user_group_bundle_map = make_link('keg_bouncer_user_group_bundle_map',
                                   'user_group_id', UserGroup.id,
                                   'permission_bundle_id', PermissionBundle.id)
 
-bundle_permission_map = make_link('bundle_permission_map',
+bundle_permission_map = make_link('keg_bouncer_bundle_permission_map',
                                   'permission_bundle_id', PermissionBundle.id,
                                   'permission_id', Permission.id)
+
+
+user_user_group_link_table_name = 'keg_bouncer_user_user_group_map'
+
+
+def make_user_to_user_group_link(user_primary_key_column, table_constructor=db.Table):
+    return make_link(user_user_group_link_table_name,
+                     'user_id', user_primary_key_column,
+                     'user_group_id', UserGroup.id,
+                     table_constructor=table_constructor)
 
 
 # A query that joins user groups with their related permissions, permission bundles, and the

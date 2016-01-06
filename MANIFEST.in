@@ -1,2 +1,2 @@
 include *.rst
-recursive-include keg_elements/templates *
+graft keg_bouncer/alembic
