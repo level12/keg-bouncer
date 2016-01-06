@@ -27,9 +27,7 @@ def requires_permissions(*tokens):
             return flask.abort(401)
         elif not current_user.has_permissions(*tokens):
             return flask.abort(403)
-        else:
-            return fn(*args, **kwargs)
-        return wrapper
+        return fn(*args, **kwargs)
     return wrapper
 
 
