@@ -15,7 +15,7 @@ setup(
     author_email='devteam@level12.io',
     url='https://github.com/level12/keg-bouncer',
     classifiers=[
-        'Development Status :: 2 - Pre-Alpha',
+        'Development Status :: 4 - Beta',
         'Intended Audience :: Developers',
         'License :: OSI Approved :: BSD License',
         'Operating System :: OS Independent',
