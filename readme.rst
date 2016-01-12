@@ -171,7 +171,7 @@ very much like this:
 
   from keg_bouncer.model import migration
 
-  from fisresid.model.entities import User
+  from app.model.entities import User
 
 
   def upgrade():
