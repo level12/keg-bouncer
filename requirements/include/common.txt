@@ -1,10 +1,10 @@
-Flask-User
-SQLAlchemy
+alembic
 coveralls
 flake8
+Flask-User
 flask-webtest
 pytest
 pytest-cov
+SQLAlchemy
 tox
 wrapt
-alembic

@@ -1,5 +1,7 @@
 from __future__ import absolute_import
 
+import datetime
+
 import sqlalchemy as sa
 import sqlalchemy.orm as saorm
 from keg.db import db
@@ -107,24 +109,64 @@ bundle_permission_map = make_link('keg_bouncer_bundle_permission_map',
                                   'permission_id', Permission.id)
 
 
-user_user_group_link_table_name = 'keg_bouncer_user_user_group_map'
+def user_group_link_table_name(parent_table_name):
+    return 'keg_bouncer_{}_user_group_map'.format(parent_table_name)
 
 
-def make_user_to_user_group_link(user_primary_key_column, table_constructor=db.Table):
-    return make_link(user_user_group_link_table_name,
+def joined_permission_query():
+    """Returns a query that joins user groups with their related permissions, permission bundles,
+    and the bundles' permissions. Filter/join the query further to find all related permissions for
+    the user groups and bundles you care about."""
+    return Permission.query.outerjoin(
+        bundle_permission_map
+    ).outerjoin(
+        user_group_bundle_map,
+        user_group_bundle_map.c.permission_bundle_id == bundle_permission_map.c.permission_bundle_id
+    ).outerjoin(
+        user_group_permission_map
+    )
+
+
+def make_user_to_user_group_link(user_primary_key_column, parent_table_name,
+                                 table_constructor=db.Table):
+    return make_link(user_group_link_table_name(parent_table_name),
                      'user_id', user_primary_key_column,
                      'user_group_id', UserGroup.id,
                      table_constructor=table_constructor)
 
 
-# A query that joins user groups with their related permissions, permission bundles, and the
-# bundles' permissions. Filter/join the query further to find all related permissions for the user
-# groups and bundles you care about.
-joined_permission_query = lambda: Permission.query.outerjoin(
-    bundle_permission_map
-).outerjoin(
-    user_group_bundle_map,
-    user_group_bundle_map.c.permission_bundle_id == bundle_permission_map.c.permission_bundle_id
-).outerjoin(
-    user_group_permission_map
-)
+def make_password_history_entity(user_primary_key_column, parent_table_name, mixin=object):
+    class PasswordHistory(db.Model, MethodsMixin, mixin):
+        __tablename__ = 'keg_bouncer_{}_password_history'.format(parent_table_name)
+
+        user_id = sa.Column(
+            user_primary_key_column.type,
+            sa.ForeignKey(user_primary_key_column, ondelete='CASCADE'),
+            nullable=False,
+            primary_key=True
+        )
+        password = sa.Column(sa.Text, nullable=False, primary_key=True)
+        created_at = sa.Column(sa.DateTime, nullable=False, default=datetime.datetime.utcnow)
+
+    return PasswordHistory
+
+
+def make_login_history_entity(user_primary_key_column, parent_table_name, mixin=object):
+    class LoginHistory(db.Model, MethodsMixin, mixin):
+        __tablename__ = 'keg_bouncer_{}_login_history'.format(parent_table_name)
+
+        user_id = sa.Column(
+            user_primary_key_column.type,
+            sa.ForeignKey(user_primary_key_column, ondelete='CASCADE'),
+            nullable=False,
+            primary_key=True,
+        )
+        created_at = sa.Column(
+            sa.DateTime,
+            nullable=False,
+            primary_key=True,
+            default=datetime.datetime.utcnow
+        )
+        is_login_successful = sa.Column(sa.Boolean, nullable=False)
+
+    return LoginHistory

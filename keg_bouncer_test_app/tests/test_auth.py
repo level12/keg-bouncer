@@ -1,12 +1,12 @@
 from __future__ import absolute_import
 
 import flask
-from flask_webtest import TestApp
+from flask_webtest import TestApp as WebTestApp
 
 
 class TestViewBase(object):
     def setup_method(self, _):
-        self.ta = TestApp(flask.current_app)
+        self.ta = WebTestApp(flask.current_app)
 
     def get(self, url):
         return self.ta.get(url, expect_errors=True)

@@ -6,25 +6,43 @@
 KegBouncer
 ==========
 
-
 .. image:: https://coveralls.io/repos/level12/keg-bouncer/badge.svg?branch=master&service=github
   :target: https://coveralls.io/github/level12/keg-bouncer?branch=master
 
-
 .. image:: https://circleci.com/gh/level12/keg-bouncer.svg?style=svg
     :target: https://circleci.com/gh/level12/keg-bouncer
+
+.. _Keg: https://pypi.python.org/pypi/Keg
+.. _KegElements: https://pypi.python.org/pypi/KegElements
+.. _Flask-User: https://pythonhosted.org/Flask-User/
+
+A one-stop shop for all things related to authentication and authorization in a Keg_ app.
 
 
 Intro
 -----
 
-A three-tiered permissions model for KegElements that builds atop flask-user. KegBouncer is aware of four kinds of
-entities:
+Built on top of Keg_ and KegElements_, KegBouncer is offers several features for managing authorization and authentication. KegBouncer allows you to pick and choose which features you want it to handle in you application. It achieves this by providing each feature as a Mixin class which you can optionally mixin to your entities (probably a `User` entity).
 
-* Users
-* Permissions (for describing actions that can be guarded within the system)
-* User groups (for grouping users in a way that best models business needs)
-* Permission bundles (for grouping permissions in a way that best models the system)
+Example integration code is provided for integrating your KegBouncer setup with Flask-User_.
+
+The available mixins cover:
+
+  * Three-tierd permission system
+  * Password-based authentication and password history
+  * Login history
+
+Refer to the sections below on how to use each of these.
+
+Permissions
+***********
+
+`keg_bouncer.mixins.PermissionMixin` provides a three-tiered permissions model. KegBouncer is aware of four kinds of entities:
+
+  * Users
+  * Permissions (for describing actions that can be guarded within the system)
+  * User groups (for grouping users in a way that best models business needs)
+  * Permission bundles (for grouping permissions in a way that best models the system)
 
 We call this a "three-tiered" permissions model because a user can be granted permissions in three ways:
 
@@ -45,6 +63,8 @@ supercedes any permission/role system in Flask-User and assumes you don't plan t
 
 Usage
 -----
+
+KegBouncer offers several mixins that you can use to pick and choose the features you need.
 
 Adding Permissions to Your Model
 ********************************

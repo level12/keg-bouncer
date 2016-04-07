@@ -30,6 +30,7 @@ setup(
         'Flask-User',
         'Keg',
         'KegElements',
+        'six',
         'SQLAlchemy',
         'wrapt',
     ],
