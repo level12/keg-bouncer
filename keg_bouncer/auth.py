@@ -1,7 +1,7 @@
 from __future__ import absolute_import
 
 import flask
-from flask_user import current_user
+from flask_login import current_user
 import wrapt
 
 from keg.web import BaseView

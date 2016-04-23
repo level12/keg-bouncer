@@ -2,7 +2,7 @@ from __future__ import absolute_import
 
 import sqlalchemy as sa
 
-import flask_user
+import flask_login
 
 from keg.db import db
 from keg_bouncer.model import mixins
@@ -16,7 +16,7 @@ class MockCryptContext(object):
         return self.encrypt(password) == hash
 
 
-class UserMixin(flask_user.UserMixin):
+class UserMixin(flask_login.UserMixin):
     id = sa.Column(sa.Integer, primary_key=True)
     name = sa.Column(sa.Unicode(), nullable=False)
 

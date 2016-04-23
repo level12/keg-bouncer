@@ -1,7 +1,6 @@
 alembic
 coveralls
 flake8
-Flask-User
 flask-webtest
 pytest
 pytest-cov
