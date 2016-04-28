@@ -30,6 +30,7 @@ setup(
         'Flask-Login',
         'Keg',
         'KegElements',
+        'pycrypto',
         'six',
         'SQLAlchemy',
         'wrapt',
