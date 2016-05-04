@@ -14,7 +14,7 @@ KegBouncer
 
 .. _Keg: https://pypi.python.org/pypi/Keg
 .. _KegElements: https://pypi.python.org/pypi/KegElements
-.. _Flask-User: https://pythonhosted.org/Flask-User/
+.. _Flask-Login: http://flask-login.readthedocs.io/en/latest/
 
 A one-stop shop for all things related to authentication and authorization in a Keg_ app.
 
@@ -22,27 +22,35 @@ A one-stop shop for all things related to authentication and authorization in a 
 Intro
 -----
 
-Built on top of Keg_ and KegElements_, KegBouncer is offers several features for managing authorization and authentication. KegBouncer allows you to pick and choose which features you want it to handle in you application. It achieves this by providing each feature as a Mixin class which you can optionally mixin to your entities (probably a `User` entity).
-
-Example integration code is provided for integrating your KegBouncer setup with Flask-User_.
+Built on top of Keg_ and KegElements_, KegBouncer offers several features for managing authorization and authentication. KegBouncer allows you to pick and choose which features you want it to handle in you application. It achieves this by providing each feature as a Mixin class which you can optionally mixin to your entities (probably a `User` entity).
 
 The available mixins cover:
 
-  * Three-tierd permission system
-  * Password-based authentication and password history
-  * Login history
+* Three-tierd permission system
+* Password-based authentication and password history
+* Login history
 
 Refer to the sections below on how to use each of these.
 
+One-Primary-Key Requirement
+***************************
+
+Note that each mixin will automatically determine the primary key of your entitiy. However, your entity must have exactly one primary key, and it must be specified as SQLAlchemy declarative class attribute.
+
+
 Permissions
-***********
+-----------
 
-`keg_bouncer.mixins.PermissionMixin` provides a three-tiered permissions model. KegBouncer is aware of four kinds of entities:
+In order to use KegBouncer's authorization features to protect Keg views, you will also need Flask-Login_.
+However, KegBouncer's models do not require that dependency.
 
-  * Users
-  * Permissions (for describing actions that can be guarded within the system)
-  * User groups (for grouping users in a way that best models business needs)
-  * Permission bundles (for grouping permissions in a way that best models the system)
+
+`keg_bouncer.mixins.PermissionMixin` provides a three-tiered permissions model. It manages four kinds of entities:
+
+* Users
+* Permissions (for describing actions that can be guarded within the system)
+* User groups (for grouping users in a way that best models business needs)
+* Permission bundles (for grouping permissions in a way that best models the system)
 
 We call this a "three-tiered" permissions model because a user can be granted permissions in three ways:
 
@@ -54,61 +62,30 @@ This terminology is designed to distinguish this permissions model from other on
 
 **Note about the term "role":** While this model is technically a special case of the widely-used *Role-based access control (RBAC)*, we took great pains to avoid the highly ambiguous term "role."
 
-About Flask-User's Built-in Roles
-*********************************
-
-Flask-User comes built-in with a [very primitive] notion of "roles" which can be assigned to users. As noted above, Flask-User's notion of "role" is quite different and far less flexible than the "role" in RBAC. KegBouncer
-supercedes any permission/role system in Flask-User and assumes you don't plan to use it.
-
 
 Usage
------
+*****
 
-KegBouncer offers several mixins that you can use to pick and choose the features you need.
-
-Adding Permissions to Your Model
-********************************
-
-To add permission facilities to your user entity, inherit the `UserMixin` and configure the primary key:
+To add permission facilities to your user entity, inherit the `PermissionMixin` like this:
 
 .. code:: python
 
+   import flask_login  # Only necessary if using KegBouncer to protect you views.
    from sqlalchemy import import Column, Integer, String
 
    Base = sqlalchemy.ext.declarative.declarative_base()
 
-   class User(Base, keg_bouncer.model.mixins.UserMixin):
+   class User(Base, flask_login.UserMixin, keg_bouncer.model.mixins.PermissionMixin):
        __tablename__ = 'users'
        id = Column(Integer, primary_key=True)
-
-You must have a single-column primary key, but it may have any name or any type you like.
-
-The mixin will assume your primary key is named `id` on the ORM object. If you want to name your primary key something other than `id` you can do it two different ways.
-
-Most simply, you can explicitly provide a column name on the entity:
-
-.. code:: python
-
-   # ...
-   class User(Base, keg_bouncer.model.mixins.UserMixin):
-       __tablename__ = 'users'
-       id = Column('name', String, primary_key=True)
-
-Or you can tell the mixin the name of your primary key column:
-
-.. code:: python
-
-   # ...
-   class User(Base, keg_bouncer.model.mixins.UserMixin):
-       __tablename__ = 'users'
-       primary_key_column = 'name'
-       name = Column(String, primary_key=True)
 
 
 Protecting Views and Components
 *******************************
 
 To protect various parts of your application, you can use the tools provided in `keg_bouncer.auth`:
+
+In order to take advantage of these tools, your `User` entity needs to also mixin `flask_login.UserMixin`.
 
 #. Use an `if` block and check for permissions:
 
@@ -183,23 +160,93 @@ If you run ``alembic heads`` again you will find that there is one head.
   31b094b2844f (application, keg_bouncer) (head)
 
 
-Also within this merge revision, you will need to create some linking tables for your User
-entity (which mixes in ``keg_bouncer.model.mixins.UserMixin``). You can modify the migration to look
-very much like this:
+Also within this merge revision, you will need to create some linking tables for your `User`
+entity (which mixes in ``keg_bouncer.model.mixins.PermissionMixin``).
+
+
+Password-based Authentication
+-----------------------------
+
+To add password-based authentication to your entity, you need to dynamically construct a password mixin object and mix it in to your entity.
 
 .. code:: python
 
-  from keg_bouncer.model import migration
+  from keg_bouncer.model import mixins
+  from passlib.context import CryptContext
+  import sqlalchemy as sa
 
-  from app.model.entities import User
+  crypt_context = CryptContext(schemes=['bcrypt'])
+
+  # This mixin is optional but allows you to add additional fields to the password history table.
+  class OptionalAdditionalFields(object):
+      another_field = sa.Column(sa.Integer)
 
 
-  def upgrade():
-      migration.link_user_to_user_groups(op, User.id)
+  password_history_mixin = mixins.make_password_mixin(
+      OptionalAdditionalFields,    # [optional] Allows you to add more fields to the password
+                                   # history table via a mixin
+      crypt_context=crypt_context  # [optional, but must be provided here or via another means]
+                                   # Configures the CryptContext for hashing and verifying
+  )
 
 
-  def downgrade():
-      migration.drop_link_from_user_to_user_groups(op)
+  class User(password_history_mixin):
+      default_crypt_context = crypt_context  # An alternative way of specifying your CryptContext
+
+      # Yet another way to specify your CryptContext
+      def get_crypt_context(self):
+          return crypt_context
+
+
+  help(User.set_password)  # Adds password to password history
+
+  help(User.verify_password)  # Verifies a password against most recent password
+
+  help(User.is_password_used_previously)  # Looks for password in history
+
+  help(User.password_history_entity)  # SQLAlchemy entity defining password history entries
+
+  User.password_history  # SQLAlchemy relationship for past passwords;
+                         # sorted in reverse chronological order
+
+
+**Note:** If you use `is_password_used_previously` or a similar concept, your choice of a hashing algorithm can drastically impact performance since password verification is intentionally slow.
+For example, using `bcrypt` instead of `sha256_crypt` will allow you to verify passwords about twice as quickly. This makes a big difference when you're sifting through past passwords.
+
+
+Login History
+-------------
+
+To add login history to your entity, you need to dynamically construct a history mixin object and mix it in to your entity.
+
+.. code:: python
+
+  from keg_bouncer.model import mixins
+  import sqlalchemy as sa
+
+  # This mixin is optional but allows you to add additional fields to the login history table.
+  class OptionalAdditionalFields(object):
+      another_field = sa.Column(sa.Integer)
+
+
+  login_history_mixin = mixins.make_login_history_mixin(
+      OptionalAdditionalFields,  # [optional] Allows you to add more fields to the login history
+                                 # table via a mixin
+  )
+
+
+  class User(login_history_mixin):
+      pass
+
+
+  help(User.login_history_entity)  # SQLAlchemy entity defining login history entries
+
+  User.login_history  # SQLAlchemy relationship for past logins;
+                      # sorted in reverse chronological order
+
+  # Example use:
+  def register_login(user):
+      user.login_history.insert(0, user.login_history_entity(is_login_successful=True))
 
 
 Development
