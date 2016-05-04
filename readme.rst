@@ -6,11 +6,11 @@
 KegBouncer
 ==========
 
-.. image:: https://coveralls.io/repos/level12/keg-bouncer/badge.svg?branch=master&service=github
-  :target: https://coveralls.io/github/level12/keg-bouncer?branch=master
-
 .. image:: https://circleci.com/gh/level12/keg-bouncer.svg?style=svg
-    :target: https://circleci.com/gh/level12/keg-bouncer
+  :target: https://circleci.com/gh/level12/keg-bouncer
+
+.. image:: https://codecov.io/github/level12/keg-bouncer/coverage.svg?branch=master
+  :target: https://codecov.io/github/level12/keg-bouncer?branch=master
 
 .. _Keg: https://pypi.python.org/pypi/Keg
 .. _KegElements: https://pypi.python.org/pypi/KegElements
