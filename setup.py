@@ -27,9 +27,11 @@ setup(
     include_package_data=True,
     zip_safe=False,
     install_requires=[
-        'Flask-User',
+        'Flask-Login',
         'Keg',
         'KegElements',
+        'pycrypto',
+        'six',
         'SQLAlchemy',
         'wrapt',
     ],

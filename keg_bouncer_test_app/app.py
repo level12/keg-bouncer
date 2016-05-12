@@ -1,11 +1,9 @@
 from __future__ import absolute_import
 
-import flask
-from flask_user import UserManager, SQLAlchemyAdapter
+from flask_login import LoginManager
 from keg.app import Keg
-from keg.db import db
 
-from .model.entities import User
+from .model import entities as ents
 from .views import blueprint
 
 
@@ -17,12 +15,14 @@ class KegBouncerTestApp(Keg):
 
     def init(self, *args, **kwargs):
         super(KegBouncerTestApp, self).init(*args, **kwargs)
-        self.user_manager = UserManager(
-            SQLAlchemyAdapter(db, User),
-            self,
-            password_validator=lambda _: True,
-            user_profile_view_function=lambda *args, **kwargs: flask.abort(401),
+
+        self.login_manager = LoginManager()
+        self.login_manager.user_loader(
+            lambda user_id: ents.User.query.filter(ents.User.id == int(user_id)).one()
         )
+        self.login_manager.login_view = 'keg_login.login-view'
+        self.login_manager.init_app(self)
+
         return self
 
 

@@ -1,19 +1,26 @@
 from __future__ import absolute_import
 
+from random import shuffle
+
 import pytest
 import sqlalchemy as sa
 
 from keg.db import db
 
-from keg_bouncer.model.entities import Permission, PermissionBundle, UserGroup
+from keg_bouncer.model.entities import (
+    Permission,
+    PermissionBundle,
+    UserGroup,
+)
+from keg_bouncer.model import mixins
 
-from ..model.entities import User
+from ..model import entities as ents
 from ..utils import in_session
 
 
 class TestPermissions(object):
     def setup_method(self, _):
-        User.query.delete()
+        ents.User.query.delete()
         UserGroup.query.delete()
         PermissionBundle.query.delete()
         Permission.query.delete()
@@ -21,7 +28,7 @@ class TestPermissions(object):
         assert Permission.query.count() == 0
         assert PermissionBundle.query.count() == 0
         assert UserGroup.query.count() == 0
-        assert User.query.count() == 0
+        assert ents.User.query.count() == 0
 
     def test_permission_entity(self):
         permissions = in_session([Permission(token=token, description=u'Permission ' + token)
@@ -106,9 +113,9 @@ class TestPermissions(object):
                 raise
 
     def test_user_entity(self):
-        users = in_session([User(name=x) for x in [u'you', u'him']])
-        assert User.query.count() == len(users)
-        assert {x.name for x in User.query} == {x.name for x in users}
+        users = in_session([ents.User(name=x) for x in [u'you', u'him']])
+        assert ents.User.query.count() == len(users)
+        assert {x.name for x in ents.User.query} == {x.name for x in users}
 
         groups, bundles, permissions = self.make_permission_grid()
         [p1, p2, p3] = permissions
@@ -132,3 +139,209 @@ class TestPermissions(object):
         assert you.get_all_permissions() == {p1, p2, p3}
         you.reset_permission_cache()
         assert you.get_all_permissions() == frozenset()
+
+
+class TestPasswordHistory(object):
+    def test_password_history(self):
+        user = in_session(ents.UserWithPasswordHistory(name=u'VIP'))
+        user2 = in_session(ents.UserWithPasswordHistory(name=u'Not VIP'))
+
+        assert user.password_history == []
+        assert not user.verify_password('test')
+        assert not user.is_password_used_previously('test')
+
+        user.set_password('mariobros')
+        assert [x.password for x in user.password_history] == ['mariobros:hashed']
+        assert not user.verify_password('test')
+        assert not user.is_password_used_previously('test')
+        assert not user.verify_password('mariobros:hashed')
+        assert user.verify_password('mariobros')
+        assert user.is_password_used_previously('mariobros')
+
+        user.set_password('cheese steak')
+        assert [x.password for x in user.password_history] == [
+            'cheese steak:hashed',
+            'mariobros:hashed',
+        ]
+        assert not user.verify_password('mariobros')
+        assert user.verify_password('cheese steak')
+        assert user.is_password_used_previously('mariobros')
+        assert user.is_password_used_previously('cheese steak')
+
+        user.set_password('Filet 34__')
+        assert [x.password for x in user.password_history] == [
+            'Filet 34__:hashed',
+            'cheese steak:hashed',
+            'mariobros:hashed',
+        ]
+        assert not user.verify_password('mariobros')
+        assert not user.verify_password('cheese steak')
+        assert user.verify_password('Filet 34__')
+        assert user.is_password_used_previously('mariobros')
+        assert user.is_password_used_previously('cheese steak')
+        assert user.is_password_used_previously('Filet 34__')
+        assert not user.is_password_used_previously('test')
+
+        db.session.flush()
+        db.session.expire_all()
+
+        # Get a shuffled history
+        history = user.password_history[:]
+        while history == user.password_history:
+            shuffle(history)
+
+        # Sort it by date and compare
+        assert [x.password for x in sorted(history, key=lambda x: x.created_at)] == [
+            'mariobros:hashed',
+            'cheese steak:hashed',
+            'Filet 34__:hashed',
+        ]
+
+        # One person's history does not affect another's
+        assert user2.password_history == []
+
+    def test_password_history_with_mixin(self):
+        user = in_session(ents.UserWithPasswordHistoryWithNotes(name=u'VIP'))
+        user2 = in_session(ents.UserWithPasswordHistoryWithNotes(name=u'Not VIP'))
+
+        get_pw_table = lambda obj: [(x.password, x.note) for x in obj.password_history]
+
+        assert user.password_history == []
+        user.set_password('mariobros')
+        assert get_pw_table(user) == [('mariobros:hashed', None)]
+
+        user.set_password('cheese steak', note='Set by admin')
+        assert get_pw_table(user) == [
+            ('cheese steak:hashed', 'Set by admin'),
+            ('mariobros:hashed',    None),
+        ]
+
+        # One person's history does not affect another's
+        assert user2.password_history == []
+
+    def test_password_history_delete_cascade(self):
+        ents.UserWithPasswordHistory.query.delete()
+        ents.UserWithPasswordHistory.password_history_entity.query.delete()
+
+        user = in_session(ents.UserWithPasswordHistory(name=u'VIP'))
+        user2 = in_session(ents.UserWithPasswordHistory(name=u'Not VIP'))
+
+        assert ents.UserWithPasswordHistory.password_history_entity.query.count() == 0
+
+        user.set_password('pass1')
+        user2.set_password('pass2')
+
+        assert ents.UserWithPasswordHistory.password_history_entity.query.count() == 2
+
+        db.session.delete(user)
+
+        assert ents.UserWithPasswordHistory.password_history_entity.query.count() == 1
+
+    def test_password_history_unicode(self):
+        user = in_session(ents.UserWithPasswordHistory(name=u'VIP'))
+        pw = u'\u2615coffee-\u26A1-bolt'
+        assert not user.verify_password(pw)
+        user.set_password(pw)
+        assert user.verify_password(pw)
+
+
+class TestLoginHistory(object):
+    def test_login_history(self):
+        user = in_session(ents.UserWithLoginHistory(name=u'VIP'))
+        user2 = in_session(ents.UserWithLoginHistory(name=u'Not VIP'))
+
+        assert user.login_history == []
+
+        user.login_history.insert(0, user.login_history_entity(is_login_successful=True))
+
+        assert [x.is_login_successful for x in user.login_history] == [True]
+
+        user.login_history.insert(0, user.login_history_entity(is_login_successful=True))
+        user.login_history.insert(0, user.login_history_entity(is_login_successful=False))
+        user.login_history.insert(0, user.login_history_entity(is_login_successful=False))
+
+        assert [x.is_login_successful for x in user.login_history] == [False, False, True, True]
+
+        db.session.flush()
+        db.session.expire_all()
+
+        # Get a shuffled history
+        history = user.login_history[:]
+        while history == user.login_history:
+            shuffle(history)
+
+        assert [x.is_login_successful for x in sorted(history, key=lambda x: x.created_at)] == [
+            True, True, False, False,
+        ]
+
+        # One person's history does not affect another person's
+        assert user2.login_history == []
+
+    def test_login_history_with_mixin(self):
+        user = in_session(ents.UserWithLoginHistoryWithNotes(name=u'VIP'))
+        user2 = in_session(ents.UserWithLoginHistoryWithNotes(name=u'Not VIP'))
+
+        get_login_table = lambda obj: [(x.is_login_successful, x.note) for x in obj.login_history]
+
+        assert user.login_history == []
+
+        user.login_history.insert(0, user.login_history_entity(is_login_successful=True))
+
+        assert get_login_table(user) == [(True, None)]
+
+        user.login_history.insert(
+            0,
+            user.login_history_entity(is_login_successful=False, note='Test')
+        )
+
+        assert get_login_table(user) == [
+            (False, 'Test'),
+            (True,  None),
+        ]
+
+        # One person's history does not affect another person's
+        assert user2.login_history == []
+
+    def test_login_history_delete_cascade(self):
+        ents.UserWithLoginHistory.query.delete()
+        assert ents.UserWithLoginHistory.login_history_entity.query.delete()
+
+        user = in_session(ents.UserWithLoginHistory(name=u'VIP'))
+        user2 = in_session(ents.UserWithLoginHistory(name=u'Not VIP'))
+
+        assert ents.UserWithLoginHistory.login_history_entity.query.count() == 0
+
+        mk_entry = lambda: user.login_history_entity(is_login_successful=False)
+        user.login_history.insert(0, mk_entry())
+        user2.login_history.insert(0, mk_entry())
+        assert ents.UserWithLoginHistory.login_history_entity.query.count() == 2
+
+        db.session.delete(user)
+        assert ents.UserWithLoginHistory.login_history_entity.query.count() == 1
+
+
+class TestKegBouncerMixin(object):
+    def test_mixins_require_more_than_one_pk(self):
+        def make_entity_with_no_pk():
+            class NoPk(mixins.KegBouncerMixin):
+                pass
+            return NoPk
+
+        try:
+            make_entity_with_no_pk()._primary_key_column()
+            assert False, 'Did not throw'
+        except AttributeError:
+            pass
+
+    def test_mixins_require_less_than_two_pks(self):
+        def make_entity_with_two_pks():
+            class TwoPks(mixins.KegBouncerMixin):
+                pk1 = sa.Column(sa.Integer, primary_key=True)
+                pk2 = sa.Column(sa.Integer, primary_key=True)
+            return TwoPks
+
+        try:
+            make_entity_with_two_pks()._primary_key_column()
+            assert False, 'Did not throw'
+        except AttributeError:
+            pass
