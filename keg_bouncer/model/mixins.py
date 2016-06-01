@@ -175,7 +175,13 @@ def make_password_mixin(history_entity_mixin=object, crypt_context=None):
                 password=crypt_context.encrypt(text_type(password)),
                 **kwargs
             )
+
+            # Assume the new password is more recent than the others and insert it at the head.
             self.password_history.insert(0, password_entry)
+
+            # If we have timestamps for all history, we can sort them.
+            if not any(x.created_at is None for x in self.password_history):
+                self.password_history.sort(key=lambda x: x.created_at, reverse=True)
 
     return PasswordMixin
 
