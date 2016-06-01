@@ -1,5 +1,6 @@
 from __future__ import absolute_import
 
+from datetime import datetime
 from random import shuffle
 
 import pytest
@@ -243,6 +244,21 @@ class TestPasswordHistory(object):
         assert not user.verify_password(pw)
         user.set_password(pw)
         assert user.verify_password(pw)
+
+    def test_password_history_ordering(self):
+        user = in_session(ents.UserWithPasswordHistory(name=u'VIP'))
+
+        # Add passwords out of order.
+        user.set_password('test1', created_at=datetime(2016, 2, 1))
+        user.set_password('test2', created_at=datetime(2015, 12, 31))
+        user.set_password('test3', created_at=datetime(2016, 1, 1))
+
+        assert user.verify_password('test1')  # this is the most recent
+        assert [x.password for x in user.password_history] == [
+            'test1:hashed',
+            'test3:hashed',
+            'test2:hashed',
+        ]
 
 
 class TestLoginHistory(object):
