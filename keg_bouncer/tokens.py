@@ -8,7 +8,12 @@ has the following copyright information:
 """
 
 import base64
-from Crypto.Cipher import AES
+from cryptography.hazmat.primitives.ciphers import (
+    Cipher,
+    algorithms as cipher_algos,
+    modes as cipher_modes,
+)
+from cryptography.hazmat.backends import default_backend as crypto_backend
 from itsdangerous import BadSignature, SignatureExpired, TimestampSigner
 
 
@@ -20,13 +25,14 @@ class TokenManager(object):
             key = secret + precursor
         else:
             key = secret.encode("utf-8") + precursor
-        self.cipher = AES.new(key[0:16])
+        self.cipher = Cipher(cipher_algos.AES(key[:16]), cipher_modes.ECB(), crypto_backend())
         self.signer = timestamp_signer(secret)
 
     def encrypt(self, data):
         """Encrypts data to url-safe base64 string."""
         padded = data + (b' ' * (16 - (len(data) % 16)))
-        encrypted = self.cipher.encrypt(padded)
+        encryptor = self.cipher.encryptor()
+        encrypted = encryptor.update(padded)
         base64ed = base64.urlsafe_b64encode(encrypted)  # URL safe base64 string with '=='
         return base64ed[0:-2]                           # base64 string without '=='
 
@@ -38,7 +44,8 @@ class TokenManager(object):
         try:
             base64ed = encrypted_data + b'=='               # base64 string with '=='
             encrypted = base64.urlsafe_b64decode(base64ed)  # encrypted data
-            padded = self.cipher.decrypt(encrypted)
+            decryptor = self.cipher.decryptor()
+            padded = decryptor.update(encrypted)
             return padded.strip()
         except Exception as e:  # pragma: no cover
             print('!!!Exception in decrypt!!!:', e)

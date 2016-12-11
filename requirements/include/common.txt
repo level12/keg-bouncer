@@ -2,7 +2,7 @@ alembic
 coveralls
 flake8
 flask-webtest
-pycrypto
+cryptography
 pytest
 pytest-cov
 SQLAlchemy
