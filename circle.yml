@@ -4,6 +4,7 @@ dependencies:
     # Python binaries of the same major version onto the path at the same time
     - pip install tox tox-pyenv
     - pyenv local 2.7.6 3.4.3 3.5.0 pypy-2.5.0
+    - sudo apt-get update --fix-missing
     - sudo apt-get install -y -qq libpython3.4
 
     # Install the deadsnakes ppa repo so we can install libpython3.5
