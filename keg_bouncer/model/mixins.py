@@ -2,8 +2,9 @@ from __future__ import absolute_import
 
 from six import text_type
 import sqlalchemy as sa
-from sqlalchemy.inspection import inspect
 from sqlalchemy.ext.declarative import declared_attr
+from sqlalchemy.ext.hybrid import hybrid_property
+from sqlalchemy.inspection import inspect
 import sqlalchemy.orm as saorm
 
 from . import entities as ents
@@ -17,7 +18,7 @@ class KegBouncerMixin(object):
     @classmethod
     def _primary_key_column(cls):
         pk_attrs = [value for value in cls.__dict__.values()
-                    if getattr(value, 'primary_key', False)]
+                    if getattr(value, 'primary_key', None) is True]
         if len(pk_attrs) != 1:
             raise cls._invalid_primary_key_error
         return pk_attrs[0]
@@ -31,6 +32,14 @@ class KegBouncerMixin(object):
         if len(values) != 1:  # pragma: no cover
             raise self._invalid_primary_key_error
         return values[0]
+
+    @hybrid_property
+    def _primary_key(self):
+        return self._primary_key_value()
+
+    @_primary_key.expression
+    def _primary_key(cls):
+        return cls._primary_key_column()
 
 
 class PermissionMixin(interfaces.HasPermissions, KegBouncerMixin):
@@ -59,14 +68,14 @@ class PermissionMixin(interfaces.HasPermissions, KegBouncerMixin):
         """A linking (mapping) table between users and user groups."""
         return ents.make_user_to_user_group_link(cls._primary_key_column(), cls.__tablename__)
 
-    def get_all_permissions_without_cache(self):
-        """Get all permissions that are joined to this User, whether directly, through permission
-        bundles, or through user groups.
+    @hybrid_property
+    def user_mapping_column(self):
+        return self.user_user_group_map.c.user_id
 
-        Warning: Calling this method on a deleted entity may raise
-        :class:`sqlalchemy.orm.exc.ObjectDeletedError`.
-        """
-        return frozenset(ents.joined_permission_query().join(
+    @hybrid_property
+    def permissions_query(self):
+        """A query that maps users to permissions through all possible avenues."""
+        return ents.joined_permission_query().join(
             self.user_user_group_map,
             sa.or_(
                 self.user_user_group_map.c.user_group_id
@@ -74,8 +83,27 @@ class PermissionMixin(interfaces.HasPermissions, KegBouncerMixin):
                 self.user_user_group_map.c.user_group_id
                     == ents.user_group_bundle_map.c.user_group_id  # noqa
             )
-        ).filter(
-            self.user_user_group_map.c.user_id == self._primary_key_value(),
+        )
+
+    @hybrid_property
+    def permissions_with_user_id_query(self):
+        """
+        Like `permissions_query` but adds a column called `user_id` that can be used to
+        filter/join on a particular user ID or user ID column.
+        """
+        return self.permissions_query.add_columns(
+            self.user_mapping_column.label('user_id')
+        )
+
+    def get_all_permissions_without_cache(self):
+        """Get all permissions that are joined to this User, whether directly, through permission
+        bundles, or through user groups.
+
+        Warning: Calling this method on a deleted entity may raise
+        :class:`sqlalchemy.orm.exc.ObjectDeletedError`.
+        """
+        return frozenset(self.permissions_query.filter(
+            self.user_mapping_column == self._primary_key
         ))
 
     def get_all_permissions(self):
