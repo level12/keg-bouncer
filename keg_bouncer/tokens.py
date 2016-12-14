@@ -20,11 +20,12 @@ from itsdangerous import BadSignature, SignatureExpired, TimestampSigner
 class TokenManager(object):
     def __init__(self, secret, timestamp_signer=TimestampSigner):
         # Create cypher to encrypt IDs and ensure >=16 characters
-        precursor = b'0123456789abcdef'
-        if isinstance(secret, bytes):
-            key = secret + precursor
-        else:
-            key = secret.encode("utf-8") + precursor
+
+        key = secret
+        if not isinstance(key, bytes):
+            key = secret.encode("utf-8")
+        if len(key) < 16:
+            raise ValueError('Key must be at least 16 bytes long')
         self.cipher = Cipher(cipher_algos.AES(key[:16]), cipher_modes.ECB(), crypto_backend())
         self.signer = timestamp_signer(secret)
 
