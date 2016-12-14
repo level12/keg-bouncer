@@ -5,12 +5,12 @@ from setuptools import setup, find_packages
 cdir = os.path.abspath(os.path.dirname(__file__))
 README = open(os.path.join(cdir, 'readme.rst')).read()
 
-from keg_bouncer.version import VERSION
-
 setup(
     name='KegBouncer',
-    version=VERSION,
+    setup_requires=['setuptools_scm'],
+    use_scm_version=True,
     description='A three-tiered permissions model for KegElements built atop Flask-User',
+    long_description=README,
     author='Level 12',
     author_email='devteam@level12.io',
     url='https://github.com/level12/keg-bouncer',
@@ -34,5 +34,4 @@ setup(
         'SQLAlchemy',
         'wrapt',
     ],
-    long_descripton=README,
 )
