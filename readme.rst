@@ -1,4 +1,5 @@
 .. default-role:: code
+
 .. role:: python(code)
   :language: python
 
@@ -134,7 +135,7 @@ folder.
 If you run ``alembic heads`` you should now see two heads, one for your application and one for
 KegBouncer.
 
-.. code:: txt
+.. code:: sh
 
     $ alembic heads
     51ba1b47505e (application) (head)
@@ -154,7 +155,7 @@ independently. A better option is to merge the two heads into one. Do that with 
 
 If you run ``alembic heads`` again you will find that there is one head.
 
-.. code:: txt
+.. code:: sh
 
   $ alembic heads
   31b094b2844f (application, keg_bouncer) (head)
