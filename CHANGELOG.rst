@@ -1,3 +1,11 @@
+2.2.1 - 2016-12-14
+##################
+
+* MAINT: Remove accidentially bundled wheels from sdist (23fc3b2_)
+
+.. _23fc3b2: https://github.com/level12/keg-bouncer/commit/23fc3b2
+
+
 2.2.0 - 2016-12-14
 ##################
 
