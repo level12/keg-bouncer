@@ -8,3 +8,5 @@ coverage.xml
 .tox
 htmlcov/
 pytest-reports/
+dist/
+build/
