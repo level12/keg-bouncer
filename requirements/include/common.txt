@@ -1,3 +1,5 @@
+keg
+kegelements
 alembic
 coveralls
 flake8
@@ -8,3 +10,4 @@ pytest-cov
 SQLAlchemy
 tox
 wrapt
+flask-login
