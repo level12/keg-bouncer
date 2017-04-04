@@ -17,11 +17,13 @@ class LoginView(BaseView):
     rule('/login-with/<permission_token>')
 
     def get(self, permission_token):
-        permission = (Permission.query.filter(Permission.token == permission_token).one_or_none()
-                      or Permission(token=permission_token,
-                                    description='Permission '+permission_token))
-        group = UserGroup(label='Group with '+permission_token, permissions=[permission])
-        user = in_session(User(name='User with '+permission_token, user_groups=[group]))
+        permission = (
+            Permission.query.filter(Permission.token == permission_token).one_or_none() or
+            Permission(token=permission_token, description='Permission ' + permission_token)
+        )
+
+        group = UserGroup(label='Group with ' + permission_token, permissions=[permission])
+        user = in_session(User(name='User with ' + permission_token, user_groups=[group]))
         login_user(user)
         is_logged_in_correctly = current_user_has_permissions(permission_token)
         assert is_logged_in_correctly

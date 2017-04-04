@@ -214,7 +214,7 @@ class TestPasswordHistory(object):
         user.set_password('cheese steak', note='Set by admin')
         assert get_pw_table(user) == [
             ('cheese steak:hashed', 'Set by admin'),
-            ('mariobros:hashed',    None),
+            ('mariobros:hashed', None),
         ]
 
         # One person's history does not affect another's
@@ -312,7 +312,7 @@ class TestLoginHistory(object):
 
         assert get_login_table(user) == [
             (False, 'Test'),
-            (True,  None),
+            (True, None),
         ]
 
         # One person's history does not affect another person's
