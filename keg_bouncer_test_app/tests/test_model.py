@@ -148,10 +148,12 @@ class TestPasswordHistory(object):
         user2 = in_session(ents.UserWithPasswordHistory(name=u'Not VIP'))
 
         assert user.password_history == []
+        assert user.password is None
         assert not user.verify_password('test')
         assert not user.is_password_used_previously('test')
 
         user.set_password('mariobros')
+        assert user.password == 'mariobros:hashed'
         assert [x.password for x in user.password_history] == ['mariobros:hashed']
         assert not user.verify_password('test')
         assert not user.is_password_used_previously('test')
@@ -160,6 +162,7 @@ class TestPasswordHistory(object):
         assert user.is_password_used_previously('mariobros')
 
         user.set_password('cheese steak')
+        assert user.password == 'cheese steak:hashed'
         assert [x.password for x in user.password_history] == [
             'cheese steak:hashed',
             'mariobros:hashed',
@@ -300,10 +303,13 @@ class TestLoginHistory(object):
         get_login_table = lambda obj: [(x.is_login_successful, x.note) for x in obj.login_history]
 
         assert user.login_history == []
+        assert user.last_login is None
 
-        user.login_history.insert(0, user.login_history_entity(is_login_successful=True))
+        login = user.login_history_entity(is_login_successful=True)
+        user.login_history.insert(0, login)
 
         assert get_login_table(user) == [(True, None)]
+        assert user.last_login == login
 
         user.login_history.insert(
             0,

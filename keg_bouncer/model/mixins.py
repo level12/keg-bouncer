@@ -180,6 +180,11 @@ def make_password_mixin(history_entity_mixin=object, crypt_context=None):
                 history_entity_mixin
             )
 
+        @property
+        def password(self):
+            return (self.password_history[0].password
+                    if len(self.password_history) else None)
+
         def verify_password(self, password):
             crypt_context = self.get_crypt_context()
             return (crypt_context.verify(text_type(password), self.password_history[0].password)
@@ -222,6 +227,12 @@ def make_login_history_mixin(history_entity_mixin=object):
                                  entry in the history log.
     """
     class LoginHistoryMixin(KegBouncerMixin):
+
+        @property
+        def last_login(self):
+            """Relationship to login history entity."""
+            return self.login_history[0] if len(self.login_history) else None
+
         @declared_attr
         def login_history(cls):
             """Relationship to login history entity."""
