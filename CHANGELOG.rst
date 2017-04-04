@@ -1,3 +1,11 @@
+2.2.3 - 2017-04-04
+##################
+
+* Integrate helpful fields on user model (f48c745_)
+
+.. _f48c745: https://github.com/level12/keg-bouncer/commit/f48c745
+
+
 2.2.2 - 2016-12-15
 ##################
 
