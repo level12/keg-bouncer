@@ -21,14 +21,14 @@ class UserMixin(flask_login.UserMixin):
     name = sa.Column(sa.Unicode(), nullable=False)
 
 
-class User(db.Model, UserMixin, mixins.PermissionMixin):
+class User(UserMixin, mixins.PermissionMixin, db.Model):
     pass
 
 
 class UserWithPasswordHistory(
-    db.Model,
     UserMixin,
-    mixins.make_password_mixin(crypt_context=MockCryptContext())
+    mixins.make_password_mixin(crypt_context=MockCryptContext()),
+    db.Model,
 ):
     pass
 
@@ -36,19 +36,20 @@ class UserWithPasswordHistory(
 class NotesMixin(object):
     note = sa.Column(sa.Text)
 
+
 noted_password_mixin = mixins.make_password_mixin(NotesMixin, crypt_context=MockCryptContext())
 
 
-class UserWithPasswordHistoryWithNotes(db.Model, UserMixin, noted_password_mixin):
+class UserWithPasswordHistoryWithNotes(UserMixin, noted_password_mixin, db.Model):
     pass
 
 
-class UserWithLoginHistory(db.Model, UserMixin, mixins.make_login_history_mixin()):
+class UserWithLoginHistory(UserMixin, mixins.make_login_history_mixin(), db.Model):
     pass
 
 
 noted_login_mixin = mixins.make_login_history_mixin(NotesMixin)
 
 
-class UserWithLoginHistoryWithNotes(db.Model, UserMixin, noted_login_mixin):
+class UserWithLoginHistoryWithNotes(UserMixin, noted_login_mixin, db.Model):
     pass
