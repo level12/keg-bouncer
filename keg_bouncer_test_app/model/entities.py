@@ -9,11 +9,11 @@ from keg_bouncer.model import mixins
 
 
 class MockCryptContext(object):
-    def encrypt(self, password):
+    def hash(self, password):
         return password + ":hashed"
 
     def verify(self, password, hash):
-        return self.encrypt(password) == hash
+        return self.hash(password) == hash
 
 
 class UserMixin(flask_login.UserMixin):
