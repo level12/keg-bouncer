@@ -205,7 +205,7 @@ def make_password_mixin(history_entity_mixin=object, crypt_context=None):
             """
             crypt_context = self.get_crypt_context()
             password_entry = self.password_history_entity(
-                password=crypt_context.encrypt(text_type(password)),
+                password=crypt_context.hash(text_type(password)),
                 **kwargs
             )
 
