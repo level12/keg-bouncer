@@ -5,10 +5,14 @@ from setuptools import setup, find_packages
 cdir = os.path.abspath(os.path.dirname(__file__))
 README = open(os.path.join(cdir, 'readme.rst')).read()
 
+version_fpath = os.path.join(cdir, 'keg_bouncer', 'version.py')
+version_globals = {}
+with open(version_fpath) as fo:
+    exec(fo.read(), version_globals)
+
 setup(
     name='KegBouncer',
-    setup_requires=['setuptools_scm'],
-    use_scm_version=True,
+    version=version_globals['VERSION'],
     description='A three-tiered permissions model for KegElements built atop Flask-User',
     long_description=README,
     author='Level 12',
