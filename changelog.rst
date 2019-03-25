@@ -1,6 +1,14 @@
 Changelog
 =========
 
+2.2.4 released 2019-03-25
+#########################
+
+* MAINT: Fix call to deprecated passlib function (fa8440f_)
+
+.. _fa8440f: https://github.com/level12/keg-bouncer/commit/fa8440f
+
+
 2.2.3 - 2017-04-04
 ##################
 
